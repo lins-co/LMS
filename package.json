@@ -1,0 +1,7 @@
+{
+    "scripts": {
+      "install-all": "npm install --prefix back-end && npm install --prefix front-end",
+      "dev": "concurrently \"npm start --prefix back-end\" \"npm run dev --prefix front-end\""
+    }
+  }
+  
