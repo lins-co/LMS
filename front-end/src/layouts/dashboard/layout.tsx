@@ -59,7 +59,7 @@ export function DashboardLayout({ sx, children, header }: DashboardLayoutProps) 
 
   const handleIssueBook = async () => {
     try {
-      const response = await fetch('http://api.lins.co.in/api/issue', {
+      const response = await fetch('https://api.lins.co.in/api/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(issueFormData),
@@ -79,7 +79,7 @@ export function DashboardLayout({ sx, children, header }: DashboardLayoutProps) 
 
   const handleReturnBook = async () => {
     try {
-      const response = await fetch('http://api.lins.co.in/api/issue', {
+      const response = await fetch('https://api.lins.co.in/api/issue', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(returnFormData),
