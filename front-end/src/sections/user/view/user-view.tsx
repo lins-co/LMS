@@ -74,7 +74,7 @@ export function UserView() {
 
   const handleFormSubmit = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/users', {
+      const response = await fetch('http://api.lins.co.in/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

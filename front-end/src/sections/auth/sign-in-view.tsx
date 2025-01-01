@@ -30,7 +30,7 @@ export function SignInView() {
         fullWidth
         name="email"
         label="Email address"
-        defaultValue="hello@gmail.com"
+        defaultValue="varghese@lins.co.in"
         InputLabelProps={{ shrink: true }}
         sx={{ mb: 3 }}
       />

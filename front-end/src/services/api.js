@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://api.lins.co.in/api';
 
 export const fetchUsers = async () => {
   try {
