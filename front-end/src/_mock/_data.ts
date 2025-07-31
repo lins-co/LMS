@@ -1,19 +1,17 @@
+import { fetchUsers, fetchBooks } from '../services/api';
 import {
   _id,
-  _price,
   _times,
   _email,
   _issued,
+  _authors,
+  _subject,
   _fullName,
   _taskNames,
-  _postTitles,
-  _description,
   _bookNames,
-  _authors,
-  _subject
+  _postTitles,
+  _description
 } from './_mock';
-
-import { fetchUsers, fetchBooks } from '../services/api';
 
 export const _getUsers = async () => {
   const users = await fetchUsers();

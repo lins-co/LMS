@@ -1,23 +1,15 @@
-import { supabase } from '../config/supabase.js';
+import pool from '../config/db.js';
 import { differenceInDays } from 'date-fns';
 
 export const getUsers = async (req, res) => {
   try {
-    const { data: students, error: studentsError } = await supabase
-      .from('students')
-      .select('*');
-
-    if (studentsError) throw studentsError;
-
-    const { data: issuedBooks, error: issuedError } = await supabase
-      .from('issued_books')
-      .select(`
-        *,
-        students(*),
-        books(*)
-      `);
-
-    if (issuedError) throw issuedError;
+    const { rows: students } = await pool.query('SELECT * FROM students');
+    const { rows: issuedBooks } = await pool.query(
+      `SELECT issued_books.*, students.*, books.*
+       FROM issued_books
+       JOIN students ON issued_books.student_id = students.id
+       JOIN books ON issued_books.book_id = books.id`
+    );
 
     const users = students.map((student, index) => {
       const userIssuedBooks = issuedBooks.filter(issue => issue.student_id === student.id);
@@ -29,10 +21,10 @@ export const getUsers = async (req, res) => {
         id: student.id,
         name: student.name,
         email: student.email,
+        subject: student.major,
         issued: userIssuedBooks.length > 0,
         avatarUrl: `/assets/images/avatar/avatar-${(index % 24) + 1}.webp`,
         fine: hasFine ? 'FINE-IMPOSED' : 'NO-FINE',
-        subject: student.major
       };
     });
 
@@ -50,20 +42,12 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ error: 'Name, email, and subject are required' });
     }
 
-    const { data, error } = await supabase
-      .from('students')
-      .insert([
-        { 
-          name,
-          email,
-          major: subject // mapping subject to major field in database
-        }
-      ])
-      .select();
+    const { rows } = await pool.query(
+      'INSERT INTO students (name, email, major) VALUES ($1, $2, $3) RETURNING *',
+      [name, email, subject]
+    );
 
-    if (error) throw error;
-
-    res.status(201).json(data[0]);
+    res.status(201).json(rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

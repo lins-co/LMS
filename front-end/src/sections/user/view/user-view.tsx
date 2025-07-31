@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import Modal from '@mui/material/Modal';
-import TextField from '@mui/material/TextField';
+
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
+import Modal from '@mui/material/Modal';
 import Button from '@mui/material/Button';
 import TableBody from '@mui/material/TableBody';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 
-import { _users } from 'src/_mock';
-import { DashboardContent } from 'src/layouts/dashboard';
+import { useTable } from 'src/hooks/use-table';
+
 import { fetchUsers } from 'src/services/api';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -25,21 +27,12 @@ import { UserTableToolbar } from '../user-table-toolbar';
 import { emptyRows, applyFilter, getComparator } from '../utils';
 
 import type { UserProps } from '../user-table-row';
-
-// Interface for form data
+// ----------------------------------------------------------------------
 interface FormData {
   name: string;
   email: string;
   subject: string;
 }
-
-// Fetch Users Function
-const _getUsers = async (): Promise<UserProps[]> => {
-  const users = await fetchUsers();
-  return users;
-};
-
-// UserView Component
 export function UserView() {
   const table = useTable();
   const [isPopupOpen, setPopupOpen] = useState(false);
@@ -49,24 +42,24 @@ export function UserView() {
     subject: '',
   });
   const [filterName, setFilterName] = useState('');
-  const [userIds, setUserIds] = useState<string[]>([]);
-  const [dataFiltered, setDataFiltered] = useState<UserProps[]>([]);
+  const [users, setUsers] = useState<UserProps[]>([]);
 
-  // Fetch users on mount
-  useEffect(() => {
-    const fetchUserIds = async () => {
-      try {
-        const users = await _getUsers();
-        setUserIds(users.map((user) => user.id));
-        setDataFiltered(users); // Initial population of filtered data
-      } catch (error) {
-        console.error('Failed to fetch users:', error);
-      }
-    };
-
-    fetchUserIds();
+  const fetchAndSetUsers = useCallback(async () => {
+    try {
+      const fetchedUsers = await fetchUsers();
+      const usersWithStringIds = fetchedUsers.map((user: any) => ({
+        ...user,
+        id: String(user.id),
+      }));
+      setUsers(usersWithStringIds);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchAndSetUsers();
+  }, [fetchAndSetUsers]);
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -74,7 +67,7 @@ export function UserView() {
 
   const handleFormSubmit = async () => {
     try {
-      const response = await fetch('https://api.lins.co.in/api/users', {
+      const response = await fetch('http://localhost:3008/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -83,6 +76,7 @@ export function UserView() {
         alert('Student added successfully!');
         setPopupOpen(false);
         setFormData({ name: '', email: '', subject: '' });
+        fetchAndSetUsers(); // Refresh users after adding a new one
       } else {
         alert('Failed to add the Student. Please try again.');
       }
@@ -91,18 +85,13 @@ export function UserView() {
       console.error(error);
     }
   };
+  const dataFiltered = applyFilter({
+    inputData: users,
+    comparator: getComparator(table.order, table.orderBy),
+    filterName,
+  });
 
   const notFound = !dataFiltered.length && !!filterName;
-
-  // Apply filter on change
-  useEffect(() => {
-    const filtered = applyFilter({
-      inputData: _users,
-      comparator: getComparator(table.order, table.orderBy),
-      filterName,
-    });
-    setDataFiltered(filtered);
-  }, [filterName, table.order, table.orderBy]);
 
   return (
     <DashboardContent>
@@ -177,8 +166,8 @@ export function UserView() {
           numSelected={table.selected.length}
           filterName={filterName}
           onFilterName={(event: React.ChangeEvent<HTMLInputElement>) => {
-            setFilterName(event.target.value);
             table.onResetPage();
+            setFilterName(event.target.value);
           }}
         />
 
@@ -188,11 +177,14 @@ export function UserView() {
               <UserTableHead
                 order={table.order}
                 orderBy={table.orderBy}
-                rowCount={userIds.length}
+                rowCount={users.length}
                 numSelected={table.selected.length}
                 onSort={table.onSort}
                 onSelectAllRows={(checked) =>
-                  table.onSelectAllRows(checked, userIds)
+                  table.onSelectAllRows(
+                    checked,
+                    users.map((row) => row.id)
+                  )
                 }
                 headLabel={[
                   { id: 'name', label: 'Name' },
@@ -220,11 +212,7 @@ export function UserView() {
 
                 <TableEmptyRows
                   height={68}
-                  emptyRows={emptyRows(
-                    table.page,
-                    table.rowsPerPage,
-                    userIds.length
-                  )}
+                  emptyRows={emptyRows(table.page, table.rowsPerPage, users.length)}
                 />
 
                 {notFound && <TableNoData searchQuery={filterName} />}
@@ -236,81 +224,13 @@ export function UserView() {
         <TablePagination
           component="div"
           page={table.page}
-          count={userIds.length}
+          count={users.length}
           rowsPerPage={table.rowsPerPage}
           onPageChange={table.onChangePage}
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={table.rowsPerPageOptions}
           onRowsPerPageChange={table.onChangeRowsPerPage}
         />
       </Card>
     </DashboardContent>
   );
-}
-
-// useTable Hook
-export function useTable() {
-  const [page, setPage] = useState(0);
-  const [orderBy, setOrderBy] = useState('name');
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-
-  const onSort = useCallback(
-    (id: string) => {
-      const isAsc = orderBy === id && order === 'asc';
-      setOrder(isAsc ? 'desc' : 'asc');
-      setOrderBy(id);
-    },
-    [order, orderBy]
-  );
-
-  const onSelectAllRows = useCallback((checked: boolean, newSelecteds: string[]) => {
-    if (checked) {
-      setSelected(newSelecteds);
-      return;
-    }
-    setSelected([]);
-  }, []);
-
-  const onSelectRow = useCallback(
-    (inputValue: string) => {
-      const newSelected = selected.includes(inputValue)
-        ? selected.filter((value) => value !== inputValue)
-        : [...selected, inputValue];
-
-      setSelected(newSelected);
-    },
-    [selected]
-  );
-
-  const onResetPage = useCallback(() => {
-    setPage(0);
-  }, []);
-
-  const onChangePage = useCallback((event: unknown, newPage: number) => {
-    setPage(newPage);
-  }, []);
-
-  const onChangeRowsPerPage = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setRowsPerPage(parseInt(event.target.value, 10));
-      onResetPage();
-    },
-    [onResetPage]
-  );
-
-  return {
-    page,
-    order,
-    onSort,
-    orderBy,
-    selected,
-    rowsPerPage,
-    onSelectRow,
-    onResetPage,
-    setSelected,
-    onChangePage,
-    onSelectAllRows,
-    onChangeRowsPerPage,
-  };
 }
