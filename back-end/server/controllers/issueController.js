@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase.js';
+import pool from '../config/db.js';
 
 export const issueBook = async (req, res) => {
   try {
@@ -9,53 +9,40 @@ export const issueBook = async (req, res) => {
     }
 
     // Get student by email
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id')
-      .eq('email', email)
-      .single();
+    const { rows: studentRows } = await pool.query('SELECT id FROM students WHERE email = $1', [email]);
+    const student = studentRows[0];
 
-    if (studentError || !student) {
+    if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
 
     // Get book by name
-    const { data: book, error: bookError } = await supabase
-      .from('books')
-      .select('id')
-      .eq('name', bookname)
-      .single();
+    const { rows: bookRows } = await pool.query('SELECT id FROM books WHERE name = $1', [bookname]);
+    const book = bookRows[0];
 
-    if (bookError || !book) {
+    if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
     // Check if book is already issued to this student
-    const { data: existingIssue, error: existingError } = await supabase
-      .from('issued_books')
-      .select('*')
-      .eq('student_id', student.id)
-      .eq('book_id', book.id)
-      .single();
+    const { rows: existingIssueRows } = await pool.query(
+      'SELECT * FROM issued_books WHERE student_id = $1 AND book_id = $2',
+      [student.id, book.id]
+    );
+    const existingIssue = existingIssueRows[0];
 
     if (existingIssue) {
       return res.status(400).json({ error: 'Book already issued to this student' });
     }
 
     // Issue the book
-    const { data: issuedBook, error: issueError } = await supabase
-      .from('issued_books')
-      .insert([
-        {
-          student_id: student.id,
-          book_id: book.id
-        }
-      ])
-      .select();
+    const { rows: issuedBookRows } = await pool.query(
+      'INSERT INTO issued_books (student_id, book_id) VALUES ($1, $2) RETURNING *',
+      [student.id, book.id]
+    );
+    const issuedBook = issuedBookRows[0];
 
-    if (issueError) throw issueError;
-
-    res.status(201).json(issuedBook[0]);
+    res.status(201).json(issuedBook);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -70,35 +57,23 @@ export const returnBook = async (req, res) => {
     }
 
     // Get student by email
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id')
-      .eq('email', email)
-      .single();
+    const { rows: studentRows } = await pool.query('SELECT id FROM students WHERE email = $1', [email]);
+    const student = studentRows[0];
 
-    if (studentError || !student) {
+    if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
 
     // Get book by name
-    const { data: book, error: bookError } = await supabase
-      .from('books')
-      .select('id')
-      .eq('name', bookname)
-      .single();
+    const { rows: bookRows } = await pool.query('SELECT id FROM books WHERE name = $1', [bookname]);
+    const book = bookRows[0];
 
-    if (bookError || !book) {
+    if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
 
     // Delete the issue record
-    const { error: deleteError } = await supabase
-      .from('issued_books')
-      .delete()
-      .eq('student_id', student.id)
-      .eq('book_id', book.id);
-
-    if (deleteError) throw deleteError;
+    await pool.query('DELETE FROM issued_books WHERE student_id = $1 AND book_id = $2', [student.id, book.id]);
 
     res.status(200).json({ message: 'Book returned successfully' });
   } catch (error) {

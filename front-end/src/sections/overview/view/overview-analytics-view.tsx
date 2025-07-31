@@ -1,9 +1,12 @@
+import React, { useState, useEffect } from 'react';
+
 import Grid from '@mui/material/Unstable_Grid2';
 import Typography from '@mui/material/Typography';
-import { fetchUsers, fetchBooks } from 'src/services/api';
+
 import { _tasks, _posts, _timeline } from 'src/_mock';
 import { DashboardContent } from 'src/layouts/dashboard';
-import React, { useState, useEffect } from 'react';
+import { fetchUsers, fetchBooks } from 'src/services/api';
+
 import { AnalyticsNews } from '../analytics-news';
 import { AnalyticsTasks } from '../analytics-tasks';
 import { AnalyticsCurrentVisits } from '../analytics-current-visits';

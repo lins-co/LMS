@@ -1,14 +1,10 @@
-import { supabase } from '../config/supabase.js';
+import pool from '../config/db.js';
 
 export const getBooks = async (req, res) => {
   try {
-    const { data: books, error } = await supabase
-      .from('books')
-      .select('*');
+    const { rows: books } = await pool.query('SELECT * FROM books');
 
-    if (error) throw error;
-
-    const formattedBooks = books.map((book, index) => ({
+    const formattedBooks = books.map((book) => ({
       id: book.id,
       authors: [book.author],
       name: book.name,
@@ -29,21 +25,12 @@ export const createBook = async (req, res) => {
       return res.status(400).json({ error: 'Book name, author, genre, and copies are required' });
     }
 
-    const { data, error } = await supabase
-      .from('books')
-      .insert([
-        {
-          name: bookname,
-          author,
-          genre,
-          copies
-        }
-      ])
-      .select();
+    const { rows } = await pool.query(
+      'INSERT INTO books (name, author, genre, copies) VALUES ($1, $2, $3, $4) RETURNING *',
+      [bookname, author, genre, copies]
+    );
 
-    if (error) throw error;
-
-    res.status(201).json(data[0]);
+    res.status(201).json(rows[0]);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

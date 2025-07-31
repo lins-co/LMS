@@ -2,6 +2,8 @@ import { Helmet } from 'react-helmet-async';
 
 import { CONFIG } from 'src/config-global';
 
+import { Chat } from 'src/components/chat/Chat';
+
 import { OverviewAnalyticsView } from 'src/sections/overview/view';
 
 // ----------------------------------------------------------------------
@@ -19,6 +21,9 @@ export default function Page() {
       </Helmet>
 
       <OverviewAnalyticsView />
+      <div style={{ marginTop: '20px' }}>
+        <Chat />
+      </div>
     </>
   );
 }

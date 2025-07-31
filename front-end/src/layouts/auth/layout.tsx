@@ -7,8 +7,6 @@ import { RouterLink } from 'src/routes/components';
 
 import { stylesMode } from 'src/theme/styles';
 
-
-
 import { Main } from './main';
 import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
